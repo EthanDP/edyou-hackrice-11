@@ -7,42 +7,62 @@ import googleapiclient.discovery
 import googleapiclient.errors
 from tika import parser
 from pathlib import Path
+from io import StringIO
+from bs4 import BeautifulSoup
 
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 
 def parse_pdf():
-    digits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
     words = open('MostCommonWords.txt', 'r')
     common_words = words.read().splitlines()
-    raw = parser.from_file("USHistory-WEB.pdf")
-    content = raw['content']
-    split_content = content.split("\n")
-    #cleaned_content = [value for value in split_content if value != '' and value != ' ' and value not in punctuation and value[0][0] not in digits and value != '\t']
-    cleaned_content = []
-    new_split_content = []
-    for line in split_content:
-        new_line = ''.join(c for c in line if c in string.ascii_letters or c == ' ')
-        new_split_content.append(new_line)
-    for line in new_split_content:
-        unique_word = False
-        words = line.split()
-        for word in words:
-            if word not in common_words:
-                unique_word = True
-                break
+    file_data = []
+    _buffer = StringIO()
+    data = parser.from_file("Calculus_Volume_1_-_WEB_68M1Z5W.pdf", xmlContent=True)
+    xhtml_data = BeautifulSoup(data['content'])
+    for page, content in enumerate(xhtml_data.find_all('div', attrs={'class': 'page'})):
+        print("Parsing: " + str(page+1))
+        _buffer = StringIO()
+        _buffer.write(str(content))
+        parsed_content = parser.from_buffer(_buffer.getvalue())
+        if parsed_content['content'] != None:
+            text = parsed_content['content'].strip()
+        file_data.append({'id': str(page+1), 'content': text})
 
-        if line == '' or line == ' ' or line == '\t' or len(line)< 15:
-            continue
-        elif not unique_word:
-            continue
-        else:
-            cleaned_content.append(line)
-    print(cleaned_content)
-    search_input = str(random.choices(cleaned_content))
+    new_pages = []
+    for page in file_data:
+        new_lines = []
+        for line in page['content'].split("\n"):
+            new_line = ''.join(c for c in line if c in string.ascii_letters or c == ' ')
+            new_lines.append(new_line)
+        new_pages.append((new_lines, page['id']))
+        print("Cleaning Characters: " + str(page['id']))
+
+    cleaned_pages = []
+    for page in new_pages:
+        cleaned_page = []
+        for line in page[0]:
+            unique_word = False
+            words = line.split()
+            for word in words:
+                if word not in common_words:
+                    unique_word = True
+                    break
+
+            if line == '' or line == ' ' or line == '\t' or len(line) < 15:
+                continue
+            elif not unique_word:
+                continue
+            else:
+                cleaned_page.append(line)
+        cleaned_pages.append((cleaned_page, page[1]))
+        print("Cleaning Lines: " + str(page[1]))
+
+    print(cleaned_pages[419])
+
+def youtube_search(search):
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
-    print(search_input)
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     api_service_name = "youtube"
@@ -59,14 +79,13 @@ def parse_pdf():
     request = youtube.search().list(
         part="snippet",
         maxResults=1,
-        q= search_input
+        q= search
     )
     response = request.execute()
-    print("Searched: " + search_input)
     result = "\"" + str(response["items"][0]["snippet"]["title"]) + "\"" + " By: "
     result += str(response["items"][0]["snippet"]["channelTitle"]) + ", "
     result += "https://youtube.com/watch?v=" + str(response["items"][0]["id"]["videoId"])
-    print(result)
+    return result
 
 def handle_pdf_upload(f):
     result_filename = str(Path(str(f)).with_suffix("")) + "_annotated.pdf"
