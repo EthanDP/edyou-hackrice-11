@@ -13,12 +13,12 @@ from bs4 import BeautifulSoup
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 
-def parse_pdf():
+def parse_pdf(file_path, result_path):
     words = open('MostCommonWords.txt', 'r')
     common_words = words.read().splitlines()
     file_data = []
     _buffer = StringIO()
-    data = parser.from_file("Calculus_Volume_1_-_WEB_68M1Z5W.pdf", xmlContent=True)
+    data = parser.from_file(file_path, xmlContent=True)
     xhtml_data = BeautifulSoup(data['content'])
     for page, content in enumerate(xhtml_data.find_all('div', attrs={'class': 'page'})):
         print("Parsing: " + str(page+1))
@@ -57,6 +57,8 @@ def parse_pdf():
                 cleaned_page.append(line)
         cleaned_pages.append((cleaned_page, page[1]))
 
+    words.close()
+
 def youtube_search(search):
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
@@ -93,6 +95,7 @@ def handle_pdf_upload(f):
         for chunk in f.chunks():
             destination.write(chunk)
 
+    #parse_pdf(temp_path, result_path)
     #os.remove(temp_path)
     return (temp_path, result_filename)
 

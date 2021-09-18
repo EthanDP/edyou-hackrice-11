@@ -1,3 +1,5 @@
+import os
+
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.http.response import HttpResponseBadRequest, HttpResponseRedirect, HttpResponseServerError
@@ -18,7 +20,7 @@ def upload_pdf(request):
             with open(annotated_file_data[0], "rb") as result:
                 response = HttpResponse(result, content_type="application/json")
                 response['Content-Disposition'] = "attachment; filename=" + annotated_file_data[1]
-                print("TITLE:" + annotated_file_data[1])
+                os.remove(annotated_file_data[0])
                 return response
 
     return HttpResponseBadRequest()
