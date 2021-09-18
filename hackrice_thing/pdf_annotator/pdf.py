@@ -1,6 +1,7 @@
 import random
 import string
 import os
+from io import StringIO
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -9,79 +10,80 @@ from tika import parser
 from pathlib import Path
 from io import StringIO
 from bs4 import BeautifulSoup
+from PyPDF2 import PdfFileWriter, PdfFileReader
+from .PyPDF2Highlight import createHighlight, addHighlightToPage
 
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 
-def parse_pdf(file_path, result_path):
-    words = open('MostCommonWords.txt', 'r')
-common_words = words.read().splitlines()
-file_data = []
-_buffer = StringIO()
-pdf_path = "Calculus_Volume_1_-_WEB_68M1Z5W.pdf"
-data = parser.from_file(pdf_path, xmlContent=True)
-xhtml_data = BeautifulSoup(data['content'])
-for page, content in enumerate(xhtml_data.find_all('div', attrs={'class': 'page'})):
-    print("Parsing: " + str(page+1))
+def parse_pdf(pdf_path, result_path):
+    words = open("pdf_annotator/MostCommonWords.txt", 'r')
+    common_words = words.read().splitlines()
+    file_data = []
     _buffer = StringIO()
-    _buffer.write(str(content))
-    parsed_content = parser.from_buffer(_buffer.getvalue())
-    if parsed_content['content'] != None:
-        text = parsed_content['content'].strip()
-    file_data.append({'id': str(page+1), 'content': text})
+    data = parser.from_file(pdf_path, xmlContent=True)
+    xhtml_data = BeautifulSoup(data['content'])
+    for page, content in enumerate(xhtml_data.find_all('div', attrs={'class': 'page'})):
+        print("Parsing: " + str(page+1))
+        _buffer = StringIO()
+        _buffer.write(str(content))
+        parsed_content = parser.from_buffer(_buffer.getvalue())
+        if parsed_content['content'] != None:
+            text = parsed_content['content'].strip()
+        file_data.append({'id': str(page+1), 'content': text})
 
-new_pages = []
-for page in file_data:
-    new_lines = []
-    for line in page['content'].split("\n"):
-        new_line = ''.join(c for c in line if c in string.ascii_letters or c == ' ')
-        new_lines.append(new_line)
-    new_pages.append((new_lines, page['id']))
-    print("Cleaning Characters: " + str(page['id']))
+    new_pages = []
+    for page in file_data:
+        new_lines = []
+        for line in page['content'].split("\n"):
+            new_line = ''.join(c for c in line if c in string.ascii_letters or c == ' ')
+            new_lines.append(new_line)
+        new_pages.append((new_lines, page['id']))
+        print("Cleaning Characters: " + str(page['id']))
 
-cleaned_pages = []
-for page in new_pages:
-    cleaned_page = []
-    for line in page[0]:
-        unique_word = False
-        words = line.split()
-        for word in words:
-            if word not in common_words:
-                unique_word = True
-                break
+    cleaned_pages = []
+    for page in new_pages:
+        cleaned_page = []
+        for line in page[0]:
+            unique_word = False
+            words = line.split()
+            for word in words:
+                if word not in common_words:
+                    unique_word = True
+                    break
 
-        if line == '' or line == ' ' or line == '\t' or len(line) < 15:
-            continue
-        elif not unique_word:
-            continue
+            if line == '' or line == ' ' or line == '\t' or len(line) < 15:
+                continue
+            elif not unique_word:
+                continue
+            else:
+                cleaned_page.append(line)
+        cleaned_pages.append((cleaned_page, page[1]))
+        print("Cleaning Lines: " + str(page[1]))
+
+    pdfInput = PdfFileReader(open(pdf_path, "rb"))
+    pdfOutput = PdfFileWriter()
+
+    for page in cleaned_pages:
+        new_page = pdfInput.getPage(int(page[1])-1)
+        if page[0] == []:
+            annotation = "No relevant topics"
         else:
-            cleaned_page.append(line)
-    cleaned_pages.append((cleaned_page, page[1]))
-    print("Cleaning Lines: " + str(page[1]))
+            annotation = youtube_search(page[0][0])
+        highlight = createHighlight(0, 792, 100, 692, {
+            "author": "",
+            "contents": annotation
+        })
 
-pdfInput = PdfFileReader(open(pdf_path, "rb"))
-pdfOutput = PdfFileWriter()
+        addHighlightToPage(highlight, new_page, pdfOutput)
 
-for page in cleaned_pages:
-    new_page = pdfInput.getPage(int(page[1])-1)
-    if page[0] == []:
-        annotation = "No relevant topics"
-    else:
-        annotation = youtube_search(page[0][0])
-    highlight = createHighlight(0, 792, 100, 692, {
-        "author": "",
-        "contents": annotation
-    })
+        pdfOutput.addPage(new_page)
+        print("Writing Annotations: " + str(page[1]))
+        if page[1] == '10':
+            break
 
-    addHighlightToPage(highlight, new_page, pdfOutput)
-
-    pdfOutput.addPage(new_page)
-    print("Writing Annotations: " + str(page[1]))
-    if page[1] == '10':
-        break
-
-outputStream = open("output.pdf", "wb")
-pdfOutput.write(outputStream)
+    outputStream = open(result_path, "wb+")
+    pdfOutput.write(outputStream)
 
 def youtube_search(search):
     # Disable OAuthlib's HTTPS verification when running locally.
@@ -121,8 +123,8 @@ def handle_pdf_upload(f):
         for chunk in f.chunks():
             destination.write(chunk)
 
-    #parse_pdf(temp_path, result_path)
-    #os.remove(temp_path)
-    return (temp_path, result_filename)
+    parse_pdf(temp_path, result_path)
+    os.remove(temp_path)
+    return (result_path, result_filename)
 
     
