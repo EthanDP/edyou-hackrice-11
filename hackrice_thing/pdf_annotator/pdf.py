@@ -56,9 +56,6 @@ def parse_pdf():
             else:
                 cleaned_page.append(line)
         cleaned_pages.append((cleaned_page, page[1]))
-        print("Cleaning Lines: " + str(page[1]))
-
-    print(cleaned_pages[419])
 
 def youtube_search(search):
     # Disable OAuthlib's HTTPS verification when running locally.
