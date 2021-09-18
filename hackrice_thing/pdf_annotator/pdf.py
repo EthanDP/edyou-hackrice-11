@@ -32,7 +32,7 @@ def parse_pdf():
                 unique_word = True
                 break
 
-        if line == '' or line == ' ' or line == '\t' or len(line)<5:
+        if line == '' or line == ' ' or line == '\t' or len(line)< 15:
             continue
         elif not unique_word:
             continue
