@@ -1,20 +1,17 @@
-from inspect import cleandoc
-import tika
-from tika import parser
 import random
-
+import string
 import os
 
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
 import googleapiclient.errors
+from tika import parser
+from pathlib import Path
 
-from string import punctuation
-import string
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
 
-def parsePDF():
+def parse_pdf():
     digits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
     words = open('MostCommonWords.txt', 'r')
     common_words = words.read().splitlines()
@@ -72,5 +69,15 @@ def parsePDF():
     print(result)
 
 def handle_pdf_upload(f):
-    for chunk in f.chunks():
-        print("PDF Received")
+    result_filename = str(Path(str(f)).with_suffix("")) + "_annotated.pdf"
+    temp_dir = os.getcwd() + "\\pdf_annotator\\temp\\"
+    temp_path = temp_dir + "temp.pdf"
+    result_path = temp_dir + result_filename
+    with open(temp_path, "wb+") as destination:
+        for chunk in f.chunks():
+            destination.write(chunk)
+
+    #os.remove(temp_path)
+    return (temp_path, result_filename)
+
+    
