@@ -1,32 +1,64 @@
-{% extends "pdf_annotator/header.html" %}
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="{% static 'pdf_annotator/base.css' %}">
+        <link rel="shortcut icon" type="image/png" href="{% static 'pdf_annotator/favicon.ico' %}"/>
+        
+        <title>edYou</title>
+    </head>
+    <body>
+        <style>
+            @font-face {
+                font-family: roboto;
+                src: url("{% static 'pdf_annotator/Roboto-Black.ttf' %}");
+            }
 
-{% block content %}
-    <div class="row">
-        <h3>
-            Trying to read a textbook but the information is just too boring?<br>
-            Need a way to quickly find a more interesting presentation of the subject?<br>
-            edYou is the answer!
-        </h3>
-        <h5>
-            Just upload a pdf of any academic textbook or paper (that you have legal access to of course)
-            and edYou will provide you with an annotated copy of the pdf with YouTube links to 
-            videos relevant to the text.
-        </h5>
-    </div>
-    <div style="padding-top: 20px;"></div>
-    <div class="row">
-        <form action="/api/upload_pdf" method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="container">
-                <div class="row">
-                    <div class="col d-flex align-items-center">
-                        <input type="file" class="form-control form-control-lg" id="id_pdf_file" name="pdf_file" accept="application/pdf"/>
+            #hero {
+                display: table;
+                width: 100%;
+                height: 100vh;
+                background: url("{% static 'pdf_annotator/lovett_background.jpg' %}") top center;
+                background-size: cover;
+            }
+
+            @media (max-width: 768px) {
+                #hero h2 {
+                    font-size: 24px;
+                    line-height: 26px;
+                    margin-bottom: 30px;
+                }
+
+                #hero h2 .rotating {
+                    display: block;
+                }
+            }
+        </style>
+
+        <section id="hero">
+            <div class="hero-container">
+                <div class="wow fadeIn">
+                    <div class="hero-logo">
+                        <img class="edyou-logo" src="{% static 'pdf_annotator/edYou.png' %}" alt="edYou">
                     </div>
-                    <div class="col d-flex align-items-center">
-                        <button type="submit" class="btn btn-success btn-lg">Upload</button>
+
+                    <h1>Welcome to edYou!</h1>
+                    <h2>Upload a PDF of a textbook or other academic document and edYou will provide you with an annotated copy with useful YouTube links.</h2>
+                    <div class="actions">
+                        <form action="/api/upload_pdf" method="POST" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="container">
+                                    <div class="d-flex align-items-center" style="display: inline-block;">
+                                        <input type="file" class="form-control form-control-lg file-upload" id="id_pdf_file" name="pdf_file" accept="application/pdf"/>
+                                        <button type="submit" class="btn btn-success btn-lg file-upload-button">Upload</button>
+                                    </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
-        </form>
-    </div>
-{% endblock %}
+        </section>
+        
+    </body>
+</html>
