@@ -12,9 +12,12 @@ from io import StringIO
 from bs4 import BeautifulSoup
 from PyPDF2 import PdfFileWriter, PdfFileReader
 from .PyPDF2Highlight import createHighlight, addHighlightToPage
-
+import pickle
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
+api_service_name = "youtube"
+api_version = "v3"
+client_secrets_file = "pdf_annotator/client_secret_533721667580-gd42cojl1vvhk64a4t0q7pr9bjddaj5p.apps.googleusercontent.com.json"
 
 def parse_pdf(pdf_path, result_path):
     words = open("pdf_annotator/MostCommonWords.txt", 'r')
@@ -65,24 +68,31 @@ def parse_pdf(pdf_path, result_path):
     pdfOutput = PdfFileWriter()
 
     for page in cleaned_pages:
-        new_page = pdfInput.getPage(int(page[1])-1)
-        if page[0] == []:
-            annotation = "No relevant topics"
+        selected_lines = []
+        if len(page[0]) > 8:
+            for i in range (0, 8):
+                choice = random.choices(page[0])
+                selected_lines.append(choice)
         else:
-            annotation = youtube_search(page[0][0])
-        highlight = createHighlight(0, 792, 100, 692, {
-            "author": "",
-            "contents": annotation
-        })
+            selected_lines = page[0]
+            
+        new_page = pdfInput.getPage(int(page[1])-1)    
+        created = 0 
+        for i in range(0,len(selected_lines)):
+            annotation = youtube_search(selected_lines[i])
+            bad_annotation = annotation == ""
+            highlight = createHighlight(0, 792-((created)*99), 50, 792-((created+1)*99), {
+                "author": "",
+                "contents": annotation
+            })
+            if not bad_annotation:
+                addHighlightToPage(highlight, new_page, pdfOutput)
+                created += 1
 
-        addHighlightToPage(highlight, new_page, pdfOutput)
+    pdfOutput.addPage(new_page)
+    print("Writing Annotations: " + str(page[1]))
 
-        pdfOutput.addPage(new_page)
-        print("Writing Annotations: " + str(page[1]))
-        if page[1] == '10':
-            break
-
-    outputStream = open(result_path, "wb+")
+    outputStream = open(result_path, "wb")
     pdfOutput.write(outputStream)
 
 def youtube_search(search):
@@ -90,21 +100,15 @@ def youtube_search(search):
     # *DO NOT* leave this option enabled in production.
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-    api_service_name = "youtube"
-    api_version = "v3"
-    client_secrets_file = "client_secret_533721667580-gd42cojl1vvhk64a4t0q7pr9bjddaj5p.apps.googleusercontent.com.json"
-
     # Get credentials and create an API client
     flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
         client_secrets_file, scopes)
-    credentials = flow.run_console()
-    youtube = googleapiclient.discovery.build(
-        api_service_name, api_version, credentials=credentials)
-
+    youtube = get_authenticated_service()
     request = youtube.search().list(
         part="snippet",
         maxResults=1,
         q = search
+        
     )
     response = request.execute()
     if "videoId" not in response["items"][0]["id"].keys():
@@ -124,7 +128,17 @@ def handle_pdf_upload(f):
             destination.write(chunk)
 
     parse_pdf(temp_path, result_path)
-    os.remove(temp_path)
+    #os.remove(temp_path)
     return (result_path, result_filename)
 
-    
+def get_authenticated_service():
+    if os.path.exists("CREDENTIALS_PICKLE_FILE"):
+        with open("CREDENTIALS_PICKLE_FILE", 'rb') as f:
+            credentials = pickle.load(f)
+    else:
+        flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(client_secrets_file, scopes)
+        credentials = flow.run_console()
+        with open("CREDENTIALS_PICKLE_FILE", 'wb') as f:
+            pickle.dump(credentials, f)
+    return googleapiclient.discovery.build(
+        api_service_name, api_version, credentials=credentials)
