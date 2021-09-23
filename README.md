@@ -5,6 +5,18 @@ A website and PDF parser tool that allows you to upload a pdf of a textbook or s
 Ethan Peck (edp2@rice.edu): Web development, file uploading and downloading, integration with PDF parser  
 Bryant Cassady (jbc8@rice.edu): PDF Parsing, PDF annotation, integration with YouTube API
 
+# Setup/How to Use
+We ran into last minute issues with hosting using Google Cloud and as such have provided the following quick and easy setup guide if you want to run the website for yourself.
+
+1. Make sure you have a recent version of Python 3 installed.
+2. In the edyou-hackrice-11 directory run the following command `python -m pip install -r requirements.txt` (if you are on Linux or Mac you may need to switch `python` to `python3`)
+3. Next, navigate to the lib/tika-python-master directory and running the following commands in this order `python setup.py build` and `python setup.py install`
+4. You will also need a Java Runtime Environment on your computer. If you already have one installed then you should be good to go.
+5. Then navigate back to the top level directory and then to hackrice_thing/
+6. Finally run the following command: `python manage.py runserver` and you are good to go! You will be able to access the website at http://127.0.0.1:8000/
+
+If you run in to any issues during this setup process feel free to reach out to me via email (edp2@rice.edu)
+
 # Submission Description
 ## Inspiration
 Every college student has had an experience with a particularly boring section of a textbook. The ones where you find yourself reading the same sentence over and over again yet still not understanding the material. We were inspired by this feeling to create a tool that makes it easy to find useful videos relating to the content you are reading about.
